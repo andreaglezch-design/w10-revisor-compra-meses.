@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Installment Purchase Check</title>
+<style>
+  :root{--bg:#fafaf7;--fg:#1d1d1b;--mut:#666;--card:#fff;--line:#e3e1da;--buy:#2f7d4f;--wait:#b7791f;--skip:#b23a3a}
+  @media (prefers-color-scheme:dark){:root{--bg:#161614;--fg:#f1f0ea;--mut:#a5a39a;--card:#201f1c;--line:#34322d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+  main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-size:1.4rem;margin:0 0 4px}
+  p.sub{color:var(--mut);margin:0 0 16px}
+  form,.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+  label{display:block;font-weight:600;margin:10px 0 2px}
+  small{color:var(--mut);display:block;margin-bottom:4px}
+  input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:1rem;background:var(--bg);color:var(--fg)}
+  button{padding:11px 14px;border-radius:8px;border:1px solid var(--line);font-size:1rem;cursor:pointer;background:var(--card);color:var(--fg);margin:8px 8px 0 0}
+  button.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  .chip{display:inline-block;padding:4px 12px;border-radius:999px;color:#fff;font-weight:700}
+  .BUY{background:var(--buy)}.WAIT{background:var(--wait)}.SKIP{background:var(--skip)}
+  .err{color:var(--skip);font-weight:600}
+  ul{margin:6px 0 0 18px;padding:0}
+  .note{color:var(--mut);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+  <h1>Installment Purchase Check</h1>
+  <p class="sub">A check on your side, before you pay. It sells nothing and never sends you to a store.</p>
+
+  <form id="f" novalidate>
+    <label for="income">Monthly income (MX$)</label>
+    <input id="income" inputmode="decimal" autocomplete="off">
+    <label for="fixed">Fixed monthly expenses (rent, food, transport…)</label>
+    <small>What you must pay every month, not counting your installments.</small>
+    <input id="fixed" inputmode="decimal" autocomplete="off">
+    <label for="current">Installments you already pay (all your apps)</label>
+    <small>Add up what you pay each month on Kueski, Aplazo, Mercado Pago, stores, etc. If none, enter 0.</small>
+    <input id="current" inputmode="decimal" autocomplete="off">
+    <label for="price">Price of the new purchase (MX$)</label>
+    <input id="price" inputmode="decimal" autocomplete="off">
+    <label for="months">Number of months</label>
+    <input id="months" inputmode="numeric" autocomplete="off">
+    <label for="real">How much does the app say you will pay per month? (optional)</label>
+    <small>If the app charges interest or fees, enter that monthly amount here. If left empty, I divide the price by the months.</small>
+    <input id="real" inputmode="decimal" autocomplete="off">
+    <p id="err" class="err" role="alert"></p>
+    <button class="primary" type="submit">Check</button>
+    <button type="button" id="demo">Load example (invented data)</button>
+    <button type="button" id="clear">Clear my data</button>
+  </form>
+
+  <section id="out" class="card" hidden aria-live="polite"></section>
+
+  <p class="note">This tool is informational and is not financial advice. The rules are a simple example and are shown below. Your data is not stored: it lives only on this page. No commissions, no affiliates, no checkout links. Funded by the person using it or an aligned benefit, never by stores or lenders.</p>
+  <details class="card"><summary>How it decides (example rules)</summary>
+    <ul>
+      <li><b>Skip:</b> if after your expenses, installments and this purchase you would have less than 0 left, or if your installments (including the new one) exceed 30% of your income.</li>
+      <li><b>Wait:</b> if you would have less than 15% of your income left, if your installments exceed 20%, or if information is missing.</li>
+      <li><b>Buy:</b> in any other case.</li>
+    </ul>
+    <p class="note">The percentages are an adjustable example. They do not replace an advisor.</p>
+  </details>
+</main>
+<script>
+(function(){
+  var ids=["income","fixed","current","price","months","real"];
+  var f=document.getElementById("f"), out=document.getElementById("out"), err=document.getElementById("err");
+  function num(id){var v=document.getElementById(id).value.trim().replace(/[$,\s]/g,"");if(v==="")return null;
+    if(!/^\d{1,9}(\.\d{1,2})?$/.test(v))return NaN;return parseFloat(v);}
+  function money(x){var r=Math.round(x);return (r<0?"-":"")+"MX$"+Math.abs(r).toLocaleString("en-US");}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  f.addEventListener("submit",function(e){
+    e.preventDefault(); err.textContent=""; out.hidden=true;
+    var v={};
+    for(var i=0;i<ids.length;i++){v[ids[i]]=num(ids[i]);
+      if(Number.isNaN(v[ids[i]])){err.textContent="Check the numbers: digits only and, optionally, two decimals.";return;}}
+    if(v.months!==null&&(v.months<1||v.months>60||v.months%1!==0)){err.textContent="Months must be a whole number between 1 and 60.";return;}
+    var unknown=[];
+    if(v.income===null||v.income<=0)unknown.push("Your monthly income.");
+    if(v.fixed===null)unknown.push("Your fixed expenses.");
+    if(v.current===null)unknown.push("Your current installments (if none, enter 0).");
+    if(v.price===null&&v.real===null)unknown.push("The price or monthly payment of the new purchase.");
+    if(v.months===null&&v.real===null)unknown.push("The number of months.");
+    var verdict,reason,list=[];
+    if(unknown.length){
+      verdict="WAIT";reason="Information is missing to check this purchase, so I cannot say you can afford it.";list=unknown;
+    }else{
+      var pay=v.real!==null?v.real:v.price/v.months;
+      var margin=v.income-v.fixed-v.current-pay;
+      var burden=(v.current+pay)/v.income;
+      var pct=Math.round(burden*100), mpct=Math.round(margin/v.income*100);
+      if(margin<0||burden>0.30){verdict="SKIP";reason=(margin<0?"With this purchase you would be short "+money(-margin)+" per month to cover your expenses and installments.":"Your installments would reach "+pct+"% of your income, above the 30% limit I use.")+" You would pay "+money(pay)+" per month for this purchase.";}
+      else if(margin<0.15*v.income||burden>0.20){verdict="WAIT";reason="You would pay "+money(pay)+" per month; your installments would reach "+pct+"% of your income and you would have "+money(margin)+" left ("+mpct+"%). It is possible, but you would be very tight.";}
+      else{verdict="BUY";reason="You would pay "+money(pay)+" per month; your installments would be "+pct+"% of your income and you would have "+money(margin)+" left ("+mpct+"%).";}
+      list=["Variable or unexpected expenses you did not enter.","Debts that are not installments (credit card, loans).","Interest or fees, if you did not enter the real monthly payment."];
+    }
+    var label={BUY:"Buy",WAIT:"Wait",SKIP:"Skip"}[verdict];
+    out.innerHTML='<span class="chip '+verdict+'">'+label+'</span><p>'+esc(reason)+'</p>'+
+      '<b>What I don&rsquo;t know</b><ul>'+list.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ul>'+
+      '<p class="note">Result computed with simple rules; this page writes the explanation, not a person. You decide.</p>'+
+      '<button type="button" id="ov">I&rsquo;ll decide anyway</button>';
+    out.hidden=false;
+    document.getElementById("ov").onclick=function(){out.insertAdjacentHTML("beforeend",'<p><b>Noted:</b> the decision is yours. This check never blocks or buys anything for you.</p>');this.remove();};
+  });
+  document.getElementById("clear").onclick=function(){f.reset();err.textContent="";out.hidden=true;out.innerHTML="";};
+  document.getElementById("demo").onclick=function(){
+    var d={income:"9000",fixed:"5500",current:"1200",price:"3000",months:"6",real:""};
+    ids.forEach(function(k){document.getElementById(k).value=d[k];});
+  };
+})();
+</script>
+</body>
+</html>
